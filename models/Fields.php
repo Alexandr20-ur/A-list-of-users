@@ -8,34 +8,32 @@ class Fields {
             'name' => [
                 'type' => 'text',
                 'name' => 'name',
-                'form' => 'form',
-                'nameRow' => 'Имя'
-
+                'nameRow' => 'Имя',
+                'dataType' => 'string'
             ],
             'surname' => [
                 'type' => 'text',
                 'name' => 'surname',
-                'form' => 'form',
-                'nameRow' => 'Фамилия'
+                'nameRow' => 'Фамилия',
+                'dataType' => 'string'
             ],
             'age' => [
                 'type' => 'text',
                 'name' => 'age',
-                'form' => 'form',
-                'nameRow' => 'Возраст'
+                'nameRow' => 'Возраст',
+                'dataType' => 'int'
             ],
-
             'telephone' => [
                 'type' => 'text',
                 'name' => 'telephone',
-                'form' => 'form',
-                'nameRow' => 'Телефон'
+                'nameRow' => 'Телефон',
+                'dataType' => 'phone'
             ],
             'email' => [
                 'type' => 'email',
                 'name' => 'email',
-                'form' => 'form',
-                'nameRow' => 'email'
+                'nameRow' => 'email',
+                'dataType' => 'email'
             ]
 
         ];

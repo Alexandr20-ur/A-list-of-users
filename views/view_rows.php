@@ -7,11 +7,12 @@ $errors = $this->get('errors');
 
 foreach ($this->get('fields') as $key => $field):
     $tag = new Input('input', $field, $values[$key] ?? null); ?>
-    <?= "<h3>" . $field['nameRow'] . "</h3>";?>
-    <?= $tag->open() . '</br>' ?>
+    <h3><?=$field['nameRow'];?></h3>
+    <?= $tag->open();?>
+    <br>
     <?php if (!empty($errors[$key])): ?>
-        <?="<div class='error'>".$errors[$key]."</div>";?>
+    <div class='error'><?=$errors[$key];?></div>
     <?php endif; ?>
 <?php endforeach;?>
-<?="</br>"?>
-
+     </br>
+<div class='error'><?=$this->get('sending')?></div>

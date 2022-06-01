@@ -1,6 +1,6 @@
 <?php /** @var $this \app\views\View */ ?>
 <?php /** @var $this \app\controllers\EditController */?>
-<title>Adding</title>
+<title>Изменение</title>
 <style>
     form {
         text-align: center;

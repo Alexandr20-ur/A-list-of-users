@@ -21,9 +21,8 @@ class Database
 
 
     public function insert($insert) {
-        $this->conn->query($insert);
+        return $this->conn->query($insert);
     }
-
 
     public function update($table,  $dataValues, $id) {
         foreach ($dataValues as $keyTable => $value) {
@@ -39,7 +38,7 @@ class Database
 
     public function display()
     {
-        $result = $this->conn->query("SELECT * FROM `users` ORDER BY `surname` ASC, `name` ASC");
+        $result = $this->conn->query("SELECT * FROM `users` ORDER BY `name` ASC, `surname` ASC, `age` ASC, `telephone` ASC");
         if ($result->num_rows >= 0) {
             $data = [];
             while ($row = $result->fetch_assoc()) {

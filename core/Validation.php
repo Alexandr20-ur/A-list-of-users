@@ -22,16 +22,7 @@ class Validation
     }
 
     public function validateName(){
-//        $val = trim($this->data['name']);
-//        if(empty($val)) {
-//            $this->addError('name' ,'данные не переданы');
-//        } else {
-//            if(!preg_match('/^([А-ЯЁ]{1}[а-яё]{3,12})$/u', $val)) {
-//                $this->addError('name', 'данные не корректны');
-//            }
-//        }
-
-        $val = trim($this->data['name']);
+        $val = $this->data['name'];
         if (empty($val)) {
             $this->addError('name', 'данные не переданы');
         } else {
@@ -41,7 +32,7 @@ class Validation
         }
     }
     public function validateSurname(){
-        $val = trim($this->data['surname']);
+        $val = $this->data['surname'];
         if(empty($val)) {
             $this->addError('surname' ,'данные не переданы');
         } else {
@@ -52,7 +43,7 @@ class Validation
     }
 
     public function validateTelephone(){
-        $val = trim($this->data['telephone']);
+        $val = $this->data['telephone'];
         if(!$val) {
             $this->addError('telephone','телефон не указан');
         } else {
@@ -63,7 +54,7 @@ class Validation
     }
 
     public function validateAge(){
-        $val = trim($this->data['age']);
+        $val = $this->data['age'];
         if(empty($val)) {
             $this->addError('age','данные не указаны');
         } else {
@@ -74,7 +65,7 @@ class Validation
     }
 
     public function validateEmail(){
-        $val = trim($this->data['email']);
+        $val = $this->data['email'];
         if(empty($val)) {
             $this->addError('email','email не указан');
         } else {
@@ -83,6 +74,8 @@ class Validation
             }
         }
     }
+
+
 
     public function addError($key, $val)
     {
