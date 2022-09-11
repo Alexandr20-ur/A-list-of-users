@@ -18,7 +18,7 @@ class FormRow {
 
     function viewRows($path) {
         $view = new View();
-        $view->setTpl(dirname(__DIR__) . $path);
+        $view->setTpl(PATH . $path);
         $view->assign('fields', $this->fields);
         $view->assign('values', $this->values);
         return $view;

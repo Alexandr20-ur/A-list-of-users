@@ -32,6 +32,7 @@ $id = $this->get('id');
             });
             event.preventDefault();
         });
+
     });
 </script>
 <div id="view">

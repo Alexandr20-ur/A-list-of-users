@@ -10,16 +10,15 @@ use app\models\FieldsBuy;
 use app\models\FormRow;
 use app\models\PrepareValues;
 use app\views\View;
-include 'models/config/pathFiles.php';
-class MainController implements Action
+class ListController implements Action
 {
     public $fields;
     public $page;
-    public $values;
+    public $data;
 
-    public function __construct($page, $values) {
+    public function __construct($page, $data) {
         $this->page = $page;
-        $this->values = $values;
+        $this->data = $data;
     }
 
     public function run() {
@@ -32,8 +31,8 @@ class MainController implements Action
         return $view;
     }
 
-    private function viewRowsMain(){
-        $view = (new FormRow($this->fields, $this->values))->viewRows('/views/view_rows_main.php');
+    private function viewRowsMain() {
+        $view = (new FormRow($this->fields, $this->data))->viewRows('/views/view_rows_list.php');
         $view->assign('edit', 'edit');
         $view->assign('btnEdit', 'Изменить');
         $view->assign('del', 'delete');
@@ -43,48 +42,43 @@ class MainController implements Action
         $view->assign('product', 'product');
         $view->assign('show', 'просмотр');
         $view->assign('fields', $this->fields);
-        $view->assign('values', $this->values);
+        $view->assign('data', $this->data);
 
         $records = 5;
 
         $count = $this->numberOfUsers();
         $view->assign('count', $count);
-        $view->assign('users', $this->dbResult($records));
         $pages = ceil($count / $records);
+        $view->assign('users', $this->getUsers($records, $pages));
         $url = 'list?';
-        $view->navigation = $this->pageNavigation($pages, $this->page, $this->values, $url);
+        $view->navigation = $this->pageNavigation($pages, $this->page, $this->data, $url);
         return $view;
     }
 
-    private function dbResult($records) {
+    private function getUsers($records, $pages): array {
         $database = Database::getInstance();
-        $user = [];
+        $fields = [];
         $result = [];
-        $offset = null;
-        if ($this->page >= 2) { $offset  = ' OFFSET '.($records  * ($this->page - 1));}
-        foreach ($this->fields as $key => $elem) {
-            $user[] = 'u.' . $key;
-            if (empty($this->value[$key])) continue;
-
-            $value = $this->value[$key];
-            switch ($elem['dataType']) {
-                case 'int':
-                    $result[] = 'u.'.$key.' = '.(int)$value;
-                    break;
-                default:
-                    $result[] = 'u.'.$key.' = '."'" . $database->getConnection()->real_escape_string($value) . "'";
-                    break;
-            }
+        if($this->page < $pages) {
+            $offset = ($this->page >= 2)
+                ? ' OFFSET ' . $records * ($this->page - 1)
+                : '';
         }
+        foreach ($this->fields as $key => $elem) {
+            $fields[] = 'u.' . $key;
+            if (empty($this->data[$key])) continue;
 
-        $where = $result ? ' WHERE ' : null;
+            $value = $this->data[$key];
+            $data = $this->prepareData($elem, $value);
+            if ($data) $result[] = 'u.'.$key.' = ' . $data;
+        }
+        $where = $result ? ' WHERE ' . implode(' AND ', $result) : '';
 
-        $sql = 'SELECT u.id, '. implode(', ', $user) . ',
+        $sql = 'select u.id, '. implode(', ', $fields) . ',
             COUNT(c.userID) as count  
             FROM users as u
-            LEFT JOIN coods as c
-            ON u.id = c.userID '
-            . $where . implode(' AND ', $result).
+            LEFT JOIN coods as c ON u.id = c.userID '
+            . $where .
             ' GROUP BY u.id 
             LIMIT 5'. $offset;
         return $database->result($sql);
@@ -94,22 +88,22 @@ class MainController implements Action
         $database = Database::getInstance();
         $result = [];
         foreach ($this->fields as $key => $elem) {
-            if (empty($this->value[$key])) continue;
+            if (empty($this->data[$key])) continue;
 
-            $value = $this->value[$key];
-            switch ($elem['dataType']) {
-                case 'int':
-                    $result[] = $key.' = '.(int)$value;
-                    break;
-                default:
-                    $result[] = $key.' = '."'" . $database->getConnection()->real_escape_string($value) . "'";
-                    break;
-            }
+            $value = $this->data[$key];
+            $data = $this->prepareData($elem, $value);
+            if ($data) $result[] = $key.' = ' . $data;
         }
-        $where = $result ? ' WHERE ' : null;
+        $where = $result ? ' WHERE ' . implode(' AND ', $result) : '';
+        $sql = 'SELECT COUNT(users.id) FROM users ' . $where;
+        return $database->column($sql);
+    }
 
-        $sql = 'SELECT COUNT(users.id) FROM users ' . $where . implode(', ', $result);
-        return $database->count($sql);
+    private function prepareData(array $field, $value) {
+        switch ($field['dataType']) {
+            case 'int': return (int) $value;
+            default: return "'" . Database::getInstance()->getConnection()->real_escape_string($value) . "'";
+        }
     }
 
     private function pageNavigation($pages, $ipage, $data, $url) {

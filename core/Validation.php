@@ -1,84 +1,45 @@
 <?php
 namespace app\core;
+use app\models\config\Debag;
+use app\views\View;
+
 class Validation
 {
     public $data;
     public $errors = [];
+    private $fields;
 
-    public function __construct($post_data)
-    {
-        $this->fields = $_POST;
-        $this->data = $post_data;
+    public function __construct($data, $fields) {
+        $this->data = $data;
+        $this->fields = $fields;
     }
 
-    public function validateForm()
-    {
-        $this->validateName();
-        $this->validateSurname();
-        $this->validateEmail();
-        $this->validateTelephone();
-        $this->validateAge();
-        return $this->errors;
-    }
+    function check() {
+        $errors = [];
+        $values = $this->data;
+        foreach ($this->fields as $nameEn => $field) {
+            if (!isset($values[$nameEn])) continue;
 
-    public function validateName(){
-        $val = $this->data['name'];
-        if (empty($val)) {
-            $this->addError('name', 'данные не переданы');
-        } else {
-            if(is_numeric($val) == true) {
-                $this->addError('name', 'данные не корректны');
+            $value = $values[$nameEn];
+            switch ($field['dataType']) {
+                case 'int':
+                case 'phone':
+                    $v = (int) $value;
+                    if(!$v) $errors[$field['name']] = 'данные не указаны';
+                    if ($v <= -1) {
+                        $errors[$field['name']] = 'данные должны быть положительными';
+                    }
+                    break;
+                case 'string';
+                case 'email';
+                    $v = $value;
+                    if(!$v) $errors[$field['name']] = 'Введите данные';
+                    if(!is_numeric($v) == false) $errors[$field['name']] = 'данные не корректны';
+                    break;
             }
+
+
         }
-    }
-    public function validateSurname(){
-        $val = $this->data['surname'];
-        if(empty($val)) {
-            $this->addError('surname' ,'данные не переданы');
-        } else {
-            if(is_numeric($val) == true){
-                $this->addError('surname', 'данные не корректны');
-            }
-        }
-    }
-
-    public function validateTelephone(){
-        $val = $this->data['telephone'];
-        if(!$val) {
-            $this->addError('telephone','телефон не указан');
-        } else {
-            if(is_numeric($val) == false) {
-                $this->addError('telephone', 'данные не корректны');
-            }
-        }
-    }
-
-    public function validateAge(){
-        $val = $this->data['age'];
-        if(empty($val)) {
-            $this->addError('age','данные не указаны');
-        } else {
-            if(is_numeric($val) == false) {
-                $this->addError('age', 'данные не корректны');
-            }
-        }
-    }
-
-    public function validateEmail(){
-        $val = $this->data['email'];
-        if(empty($val)) {
-            $this->addError('email','email не указан');
-        } else {
-            if(!filter_var($val, FILTER_VALIDATE_EMAIL)) {
-                $this->addError('email', 'email не корректный');
-            }
-        }
-    }
-
-
-
-    public function addError($key, $val)
-    {
-        $this->errors[$key] = $val;
+       return $errors;
     }
 }
