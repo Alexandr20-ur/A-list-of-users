@@ -7,65 +7,93 @@ use app\core\Database;
 use app\core\Validation;
 use app\models\config\Debag;
 use app\models\FieldsBuy;
+use app\models\FormRow;
 use app\models\MessageErrors;
 use app\models\PrepareValues;
 use app\views\Errors;
 use app\views\View;
-use JetBrains\PhpStorm\Pure;
 
-include 'models/config/pathFiles.php';
-class ConfirmBuyController implements Action
+class ConfirmProductController implements Action
 {
     private array $fields;
-    private $value;
+    private $data;
+    private $message;
+    private $userId;
 
-    public function __construct($value) {
-
+    public function __construct($data) {
         $this->fields = (new FieldsBuy())->get();
-        $this->value = $value;
+        $this->data = $data;
     }
 
     public function run(): View {
         $view = new View();
-        $view->setTpl(PATH.'\views\view_buy_errors.php');
-        $view->show = $this->show();
-        if (!isset($this->value['submit'])) return $view;
+        $view->setTpl(PATH.'\views\view_goods_errors.php');
 
-        $valid = new Validation($this->value, $this->fields);
+        if(empty($this->data['userID'])) {
+            $errors[] = $this->getMessage()->get(MessageErrors::ERROR_ID);
+            $view->errors = $this->viewErrors($errors);
+            return $view;
+        }
+        $this->userId = abs((int) $this->data['userID']);
+        if (!$this->checkUserId()) {
+            $errors[] = $this->getMessage()->get(MessageErrors::ERROR_ID);
+            $view->errors = $this->viewErrors($errors);
+            return $view;
+        }
+        $view->assign('id', $this->userId);
+        $view->form = $this->form();
+        $count = $this->numberOfGoods();
+        if($count >= AddProductController::LIMIT) {
+            $view->form->assign('count', $count);
+            $errors = [];
+            $errors[] = $this->getMessage()->get(MessageErrors::COUNT_ERORR);
+            $view->errors = $this->viewErrors($errors);
+            return $view;
+        }
+        $valid = new Validation($this->data, $this->fields);
         $errors = $valid->check();
-        $view->show->assign('errors', $errors);
-        $prepare = (new PrepareValues())->get($this->fields, $this->value);
-        if($errors) return  $view;
+        $view->form->assign('errors', $errors);
+        if ($errors) return $view;
 
-        if ($this->addRecord($prepare)) header('Location: list');
+//        $fields = null;
+//        foreach(array_keys($this->fields) as $elem) {
+//            $fields = !empty($this->data[$elem]);
+//        }
+//
+//        if($fields === false) return $view;
 
-        $messageErrors = new MessageErrors();
-        $errors = [];
-        $errors[] = $messageErrors->get(MessageErrors::BUY_ERORR);
-        $view->errors = $this->viewErrors($errors);
+        $prepare = (new PrepareValues())->get($this->fields, $this->data);
+        if ($this->addRecord($prepare)) {
+            $i = 1;
+            $view->form->assign('i', $i);
+            $message = $this->getMessage()->get(MessageErrors::ADD_SUCCESS);
+            $view->form->assign('message', $message);
+        } else {
+            $errors = $this->getMessage()->get(MessageErrors::ADD_ERROR);
+            $view->errors = $this->viewErrors($errors);
+        }
+
         return $view;
     }
 
-    public function show(): View {
-        $view = new View();
-        $view->setTpl(PATH.'\views\view_buy.php');
-        $view->assign('inputData', array_slice($this->fields, 0,2));
-        $view->assign('textareaData', array_slice($this->fields, 2));
-        $view->assign('value', $this->value);
-        return $view;
+    private function form() {
+        return (new FormRow($this->fields, $this->data))
+            ->viewRows('\views\view_goods.php');
     }
 
-    public function addRecord($values) {
+    private function addRecord($values) {
         $database = Database::getInstance();
         $result = [];
-        foreach ($this->fields as $nameEn => $field) {
-            if (!isset($values[$nameEn])) continue;
+        foreach ($this->fields as $key => $elem) {
+            if (empty($this->data[$key])) continue;
 
-            $value = $values[$nameEn];
-            $result[$nameEn] = match ($field['dataType']) {
-                'int' => (int)$value,
-                default => "'" . $database->getConnection()->real_escape_string($value) . "'",
-            };
+            $value = $values[$key];
+            switch ($elem['dataType']) {
+                case 'int': $result[$key] = (int)$value;
+                    break;
+                default: $result[$key] = "'" . $database->getConnection()->real_escape_string($value) . "'";
+                    break;
+            }
         }
         $sql = 'INSERT INTO `coods` (' . implode(',', array_keys($result)) . ') VALUES (' . implode(',', $result) . ')';
         return $database->insert($sql);
@@ -73,6 +101,24 @@ class ConfirmBuyController implements Action
 
     private function viewErrors($errors) {
         return (new Errors($errors))->view();
+    }
+
+    private function numberOfGoods () {
+        $database = Database::getInstance();
+        $sql = 'SELECT COUNT(coods.userID) FROM `coods` WHERE coods.userID = '.$this->userId;
+        return $database->column($sql);
+    }
+
+    private function getMessage() {
+        if ($this->message === null) {
+            $this->message = new MessageErrors();
+        }
+        return $this->message;
+    }
+
+    private function checkUserId() {
+        $sql = 'SELECT id FROM users WHERE id = ' . $this->userId;
+        return (bool) Database::getInstance()->row($sql);
     }
 
 }

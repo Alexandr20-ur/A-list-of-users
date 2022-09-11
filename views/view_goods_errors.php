@@ -34,7 +34,7 @@ $id = $this->get('id');
     });
 </script>
 <div id="view">
-    <?php $this->error->display();?>
+    <?php $this->errors->display();?>
     <?php $this->form->display();?>
 </div>
 </body>

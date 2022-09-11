@@ -4,66 +4,90 @@ namespace app\controllers;
 
 use app\Action;
 use app\core\Database;
-use app\core\Validation;
 use app\models\config\Debag;
 use app\models\FieldsBuy;
 use app\models\FormRow;
 use app\models\MessageErrors;
-use app\models\PrepareValues;
+use app\Router;
 use app\views\Errors;
 use app\views\View;
-use JetBrains\PhpStorm\Pure;
 
-include 'models/config/pathFiles.php';
-class BuyController implements Action
+class AddProductController implements Action
 {
-    private $value;
-    private $id;
-    private array $fields;
+    const LIMIT = 10;
 
-    public function __construct($value, $id) {
-        $this->value = $value;
-        $this->id = $id;
+    private $data;
+    private array $fields;
+    private $message;
+
+    private $userId;
+
+    public function __construct($data) {
+        $this->data = $data;
         $this->fields = (new FieldsBuy())->get();
     }
 
     public function run(): View {
         $view = new View();
-        $view->setTpl(PATH.'\views\buy.php');
-        $view->viewForm = $this->buyForm();
-        $count = $this->numberOfCoods();
-        if($count >= 10) {
-            $view->viewForm->assign('count', $count);
-            $messageErrors = new MessageErrors();
-            $errors = [];
-            $errors[] = $messageErrors->get(MessageErrors::COUNT_ERORR);
-            $view->errorRows = $this->viewErrors($errors);
+        $view->setTpl(PATH.'\views\add_goods.php');
+        $view->form = $this->form();
+
+        //Проверки
+        if (empty($this->data['userID'])) {
+            $i = 1;
+            $view->form->assign('i', $i);
+            $errors[] = $this->getMessage()->get(MessageErrors::ERROR_URL);
+            $view->errors = $this->viewErrors($errors);
             return $view;
         }
+
+        $this->userId = abs((int) $this->data['userID']);
+        if (!$this->checkUserId()) {
+            $i = 1;
+            $view->form->assign('i', $i);
+            $errors[] = $this->getMessage()->get(MessageErrors::ERROR_ID);
+            $view->errors = $this->viewErrors($errors);
+            return $view;
+        }
+
+        // Добавляем
+        $view->form->assign('id', $this->userId);
+        $count = $this->numberOfCoods();
+        //Проверка по кол-ву записи
+        if ($count >= self::LIMIT) {
+            $view->form->assign('count', $count);
+            $errors = [];
+            $errors[] = $this->getMessage()->get(MessageErrors::COUNT_ERORR);
+            $view->errors = $this->viewErrors($errors);
+        }
+
         return $view;
     }
 
-
-    public function buyForm(): View {
-        $view = new View();
-        $view->setTpl(PATH.'\views\view_buy.php');
-        $view->assign('value', $this->value);
-        $view->assign('inputData', array_slice($this->fields, 0,2));
-        $view->assign('textareaData', array_slice($this->fields, 2));
-        $view->assign('id', $this->id);
-        return $view;
+    private function form() {
+        return (new FormRow($this->fields,$this->data))
+            ->viewRows('\views\view_goods.php');
     }
-
-
 
     private function viewErrors($errors) {
         return (new Errors($errors))->view();
     }
 
-    private function numberOfCoods () {
+    private function numberOfCoods() {
         $database = Database::getInstance();
-        $sql = 'SELECT COUNT(coods.userID) FROM `coods` WHERE coods.userID = '.$this->id;
-        return $database->count($sql);
+        $sql = 'SELECT COUNT(coods.userID) FROM `coods` WHERE coods.userID = ' . $this->userId;
+        return $database->column($sql);
     }
 
+    private function getMessage() {
+        if ($this->message === null) {
+            $this->message = new MessageErrors();
+        }
+        return $this->message;
+    }
+
+    private function checkUserId() {
+        $sql = 'SELECT id FROM users WHERE id = ' . $this->userId;
+        return (bool) Database::getInstance()->row($sql);
+    }
 }

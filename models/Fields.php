@@ -1,7 +1,7 @@
 <?php
 namespace app\models;
 
-class Fields {
+class Fields  implements IFieldsRepository {
 
     function get() {
         return [
@@ -35,7 +35,6 @@ class Fields {
                 'nameRow' => 'email',
                 'dataType' => 'email'
             ]
-
         ];
     }
 }

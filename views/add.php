@@ -1,9 +1,7 @@
 <?php /** @var $this \app\views\View */ ?>
-<?php /** @var $this \app\controllers\EditController */?>
-<?php
-$id = $this->get('id');
-?>
-<title>Изменение</title>
+<?php /** @var $this \app\controllers\AddController */?>
+
+<title>Добавление</title>
 <style>
     form {
         text-align: center;
@@ -15,8 +13,9 @@ $id = $this->get('id');
 </style>
 <body>
     <?php $this->errorRows->display();?>
-<form action="" method="post">
+<form action="add" method="post" id="form" >
     <?php $this->filingRows->display();?>
-    <input type="submit" value="Изменить" name="submit">
+    <input type="submit" value="Добавить" name="submit">
 </form>
 </body>
+

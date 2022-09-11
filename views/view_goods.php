@@ -6,15 +6,15 @@ $errors = $this->get('errors');
 $values = $this->get('values');
 $count = $this->get('count');
 $i = $this->get('i');
-$message = $this->get('messages');
+$message = $this->get('message');
 $fields = $this->get('fields');
 ?>
 
 <form action="" id="form">
 <?php
 foreach ($fields as $key => $field):
-    $tag = new Input('input', $field, $values[$key] ?? null);
-    $tagForm = new TagForm($field);?>
+    $tag = new Input( $field, $values[$key] ?? null);
+    $tagForm = new TagForm('h3' ,$field);?>
     <?= $tagForm->open()?>
     <p><?= $tag->open();?></p>
     <?php if (!empty($errors[$field['name']])): ?>
@@ -22,12 +22,11 @@ foreach ($fields as $key => $field):
     <?php endif; ?>
 <?php endforeach;?>
 
-<?php if (!$count):?>
+<?php if (!$count && !$i):?>
     <button type="submit" name="submit" value="купить" id="submit">Купить</button>
 <?php endif;?>
 </form>
 <?php if($i):?>
-    <a href="list"><button name="down">Назад</button></a>
     <p><?=$message?></p>
 <?php endif;?>
 

@@ -2,98 +2,84 @@
 namespace app\controllers;
 use app\Action;
 use app\core\Database;
+use app\models\config\Debag;
 use app\models\Fields;
 use app\models\config\ViewRow;
-use app\models\FieldsRepository;
 use app\models\FormRow;
-use app\usecases\GetFieldsUseCase;
+use app\models\MessageErrors;
+use app\models\PrepareValues;
+use app\views\Errors;
 use app\views\View;
 use app\core\Validation;
-use Exception;
 
-ini_set('display_errors', 1);
 class AddController implements Action
 {
     private $fields;
-    private $values;
+    private $data;
 
-    private function prepareValues(array $fields, array $values) {
-        $prepareResult = [];
-        foreach ($fields as $nameEn => $field) {
-            if (!isset($values[$nameEn])) continue;
-
-            $value = $values[$nameEn];
-            switch ($field['dataType']) {
-                case 'int':
-                    $prepareResult[$field['name']] = (int) $value;
-                    break;
-                case 'string';
-                case 'email';
-                case 'phone';
-                    $prepareResult[$field['name']] = trim($value);
-                    break;
-            }
-        }
-        return $prepareResult;
+    public function __construct($data) {
+        $this->data = $data;
     }
 
     public function run() {
-        $this->fields = (new Fields())->get();
-        $this->values = $_POST;
-
         $view = new View();
-        $view->setTpl(dirname(__DIR__) . '/views/add.php');
-        $view->filingRows = $this->viewRows();
+        $view->setTpl(PATH. '\views\add.php');
+        $this->fields = (new Fields())->get();
+        $prepare = (new PrepareValues())->get($this->fields, $this->data);
+        $view->filingRows = $this->viewRows($prepare);
+        //Валидация данных
+        if (!isset($this->data['submit'])) return $view;
 
+        $valid = new Validation($this->data, $this->fields);
+        $errors = $valid->check();
+        $view->filingRows->assign('error', $errors);
+        if ($errors) return $view;
 
-        if (isset($_POST['submit'])) {
-            $valid = new Validation($this->values);
-            $this->prepareValues($this->fields, $this->values);
-            $errors = $valid->validateForm();
-            $view->filingRows->assign('errors', $errors);
-            if (!$errors) {
-                if(!$this->save($this->fields, $this->values)){
-                    $view->assign('errorMessage', 'Произошла ошибка');
-                } else {
-                    header("Location: main");
-                }
-            }
+        if (!$this->save($this->fields, $prepare)) {
+            $messageErrors = new MessageErrors();
+            $errors = [];
+            $errors[] = $messageErrors->get(MessageErrors::ADD_ERROR);
+            $errors[] = $messageErrors->get(MessageErrors::SEND_ERROR);
+            $view->errorRows = $this->viewErrors($errors);
+        } else {
+            header("Location: list");
         }
+
         return $view;
     }
 
-    private function viewRows() {
-        return (new FormRow($this->fields, $this->prepareValues($this->fields, $this->values)))->viewRows('/views/view_rows.php');
+    private function viewRows($prepare) {
+        $result = array_filter($prepare, function ($v) {
+            return ($v);
+        });
+        return (new FormRow($this->fields, $result))
+            ->viewRows('/views/view_rows.php');
     }
 
-    private function save($fields, $values) {
-        $column = [];
+    private function viewErrors($errors) {
+        return (new Errors($errors))->view();
+    }
+
+    //функция выполнения записи данных в бд
+    private function save($fields, $data) {
         $database = Database::getInstance();
         $result = [];
-        foreach ($fields as $nameEn => $field) {
-            $column[] = $nameEn;
-            if (!isset($values[$nameEn])) continue;
-            $value = $values[$nameEn];
-            switch ($field['dataType']) {
+        foreach ($fields as $key => $elem) {
+            if (empty($data[$key])) continue;
+
+            $value = $data[$key];
+            switch ($elem['dataType']) {
                 case 'int':
-                    $result[] = (int) $value;
+                    $result[$key] = (int)$value;
                     break;
-                case 'string';
-                case 'email';
-                case 'phone';
-                    $result[] = "'".$database->getConnection()->real_escape_string($value)."'";
+                default:
+                    $result[$key] = "'" . $database->getConnection()->real_escape_string($value) . "'";
                     break;
             }
         }
-
-        $sql = "INSERT INTO `users` (".implode(',',$column).") VALUES (".implode(',', $result).")";
+        $sql = "INSERT INTO `users` (" . implode(', ', array_keys($result)) . ") VALUES (" . implode(', ', $result) . ")";
         return $database->insert($sql);
     }
 }
 
 
-function debag($data){
-    echo '<pre>';
-    var_dump($data);
-    echo '</pre>';
-}
